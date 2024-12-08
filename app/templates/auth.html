@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Авторизация</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+</head>
+<body>
+    {% if q %}
+    <div class="q_block">
+        <h1>Разрешите использовать cookie и fingerprint?</h1>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Excepturi non doloremque ratione quam, itaque magnam veniam similique. Modi illo sit quisquam laudantium incidunt reiciendis, ex minima. Fuga et voluptates vero?</p>
+        <button id="accept_cookie">Принять</button>
+        <button id="refuse_cookie">Создать аккаунт с паролем</button>
+    </div>
+    {% else %}
+    <div class="cont">
+        <p>Пожалуйста, подождите, идёт загрузка...</p>
+    </div>
+    {% endif %}
+    
+    <script src="{{ url_for('static', filename='fp.min.js') }}"></script>
+    <script>
+        const fpPromise = FingerprintJS.load();
+
+        fpPromise
+        .then(fp => fp.get())
+        .then(result => {
+            const visitorId = result.visitorId;
+
+            fetch('/save-fingerprint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ fingerprint: visitorId })
+            })
+            .then(async (r) => {
+                if (r.ok) {
+                    location.href = '/';
+                }
+                else {
+                    body = await r.json();
+                    location.href = `/error/${body.error}`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

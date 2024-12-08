@@ -1,0 +1,137 @@
+.cm-s-pycar-theme.CodeMirror {
+    background-color: #1d1d1d;
+    color: #f2f6f8;
+    padding: 20px 10px;
+    border-radius: 10px;
+    height: 100%;
+}
+
+.cm-s-pycar-theme div.CodeMirror-selected {
+    background: #3b4853;
+}
+
+.cm-s-pycar-theme .CodeMirror-line::selection,
+.cm-s-pycar-theme .CodeMirror-line>span::selection,
+.cm-s-pycar-theme .CodeMirror-line>span>span::selection {
+    background: #3b4853fc
+}
+
+.cm-s-pycar-theme .CodeMirror-line::-moz-selection,
+.cm-s-pycar-theme .CodeMirror-line>span::-moz-selection,
+.cm-s-pycar-theme .CodeMirror-line>span>span::-moz-selection {
+    background: #49483efc
+}
+
+.cm-s-pycar-theme .CodeMirror-gutters {
+    background-color: #1d1d1d;
+    /* border-right: 10px solid red; */
+    border-right: 0;
+}
+
+.cm-s-pycar-theme .CodeMirror-guttermarker {
+    color: #fff
+}
+
+.cm-s-pycar-theme .CodeMirror-guttermarker-subtle {
+    color: #d0d0d0
+}
+
+.cm-s-pycar-theme .CodeMirror-linenumber {
+    color: #ffffff18;
+}
+
+.cm-s-pycar-theme .CodeMirror-cursor {
+    border-left: 1px solid #f8f8f0
+}
+
+.cm-s-pycar-theme span.cm-comment {
+    color: #75715e
+}
+
+.cm-s-pycar-theme span.cm-atom {
+    color: #ae81ff
+}
+
+.cm-s-pycar-theme span.cm-number {
+    color: #ae81ff
+}
+
+.cm-s-pycar-theme span.cm-comment.cm-attribute {
+    color: #97b757
+}
+
+.cm-s-pycar-theme span.cm-comment.cm-def {
+    color: #bc9262
+}
+
+.cm-s-pycar-theme span.cm-comment.cm-tag {
+    color: #bc6283
+}
+
+.cm-s-pycar-theme span.cm-comment.cm-type {
+    color: #5998a6
+}
+
+.cm-s-pycar-theme span.cm-attribute,
+.cm-s-pycar-theme span.cm-property {
+    color: #a6e22e
+}
+
+.cm-s-pycar-theme span.cm-keyword {
+    color: #f92672
+}
+
+.cm-s-pycar-theme span.cm-builtin {
+    color: #66d9ef
+}
+
+.cm-s-pycar-theme span.cm-string {
+    color: #e6db74
+}
+
+.cm-s-pycar-theme span.cm-variable {
+    color: #f8f8f2
+}
+
+.cm-s-pycar-theme span.cm-variable-2 {
+    color: #9effff
+}
+
+.cm-s-pycar-theme span.cm-type,
+.cm-s-pycar-theme span.cm-variable-3 {
+    color: #66d9ef
+}
+
+.cm-s-pycar-theme span.cm-def {
+    color: #fd971f
+}
+
+.cm-s-pycar-theme span.cm-bracket {
+    color: #f8f8f2
+}
+
+.cm-s-pycar-theme span.cm-tag {
+    color: #f92672
+}
+
+.cm-s-pycar-theme span.cm-header {
+    color: #ae81ff
+}
+
+.cm-s-pycar-theme span.cm-link {
+    color: #ae81ff
+}
+
+.cm-s-pycar-theme span.cm-error {
+    background: #f92672;
+    color: #f8f8f0
+}
+
+.cm-s-pycar-theme .CodeMirror-activeline-background {
+    background: #373831
+}
+
+.cm-s-pycar-theme .CodeMirror-matchingbracket {
+    text-decoration: underline;
+    color: #fff !important
+}
