@@ -38,6 +38,7 @@
                 body: JSON.stringify({ fingerprint: visitorId })
             })
             .then(async (r) => {
+                
                 if (r.ok) {
                     location.href = '/';
                 }
