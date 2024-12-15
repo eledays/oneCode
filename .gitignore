@@ -4,3 +4,4 @@ __pycache__
 *db
 temp.py
 *.log
+user_code.*

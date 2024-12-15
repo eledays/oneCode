@@ -1,5 +1,3 @@
-let dataToSend = [];
-
 const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
     lineNumbers: true,
     mode: 'python',
@@ -23,21 +21,14 @@ editor.on('inputRead', async function(cm, change) {
     }
 });
 
-// editor.on('change', (cm, change) => {
-//     console.log('asdf');
-//     dataToSend.push(change);
-// });
-
-// setInterval(() => {
-//     if (dataToSend.length <= 0) return;
-
-//     fetch('/add', {
-//         method: 'POST',
-//         headers: {
-//             'Content-Type': 'application/json'
-//         },
-//         body: JSON.stringify(dataToSend)
-//     });
-
-//     dataToSend = [];
-// }, 1000);
+editor.on('change', (cm, change) => {
+    console.log(cm.getValue());
+    
+    fetch('/update_code', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({text: cm.getValue()})
+    });
+});

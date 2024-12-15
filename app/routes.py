@@ -89,35 +89,15 @@ def error_page(error):
     return render_template('error.html', error=error)
 
 
-@app.route('/add', methods=['POST'])
+@app.route('/update_code', methods=['POST'])
 def add_symbol():
     data = request.json
 
-    print(data)
+    text = data.get('text')
+
+    #! Валидация текста
     
-    def file_worker():
-        task = task_queue.get()
-        while task is not None:
-            update_file(*task)
-            task_queue.task_done()
-            task = task_queue.get()
-
-    def update_file(row, col, text):
-        print(text)
-        with open(app.config.get('USER_CODE_PATH'), 'r+', encoding='utf-8') as f:
-            code = f.read()
-
-            i = row * col
-            code = code[:i] + text + code[i:]
-
-            f.seek(0)
-            f.write(code)
-
-    task_queue = Queue()
-
-    for action in data:
-        task_queue.put((action['from']['line'] + 1, action['from']['ch'], action['text'][0]))
-    
-    threading.Thread(target=file_worker).start()
+    with open(app.config.get('USER_CODE_PATH'), 'w', encoding='utf-8') as file:
+        file.write(text)
 
     return jsonify({'code': 'code'}), 200
