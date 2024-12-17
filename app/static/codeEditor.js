@@ -7,7 +7,7 @@ const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
     indentUnit: 4,
     indentWithTabs: false,
     smartIndent: true,
-    extraKeys: { "Ctrl-Space": "autocomplete" },
+    extraKeys: {},
     autoCloseBrackets: true,
     hintOptions: {
         completeSingle: false
@@ -22,13 +22,16 @@ editor.on('inputRead', async function(cm, change) {
 });
 
 editor.on('change', (cm, change) => {
-    console.log(cm.getValue());
-    
     fetch('/update_code', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({text: cm.getValue()})
+    })
+    .then((r) => r.json())
+    .then((data) => {
+        console.log(data);
+        
     });
 });
