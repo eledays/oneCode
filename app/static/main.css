@@ -29,6 +29,15 @@ body {
     border: none;
 }
 
+@media screen and (orientation: portrait) {
+
+    .content {
+        padding: 3vh 5%;
+        height: 100vh;
+    }
+
+}
+
 .menu_block {
     background-color: #1f1f1f;
     color: white;
@@ -67,4 +76,59 @@ button#menu {
     font-size: 16px;
     cursor: pointer;
     transition: .3s;
+}
+
+.progress_bar {
+    --pg-w: 100px;
+    --pg-h: 300px;
+    position: absolute;
+    width: var(--pg-w);
+    height: var(--pg-h);
+    background-color: #ffffff05;
+    top: calc(50% - var(--pg-h) / 2);
+    right: 20px;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.progress_bar .progress_bar_inner {
+    position: absolute;
+    width: var(--pg-w);
+    height: 100%;
+    background-color: #42ff59;
+    bottom: 0;
+    right: 0;
+    border-radius: 0;
+    transition: .5s;
+}
+
+.progress_bar.shake {
+    animation-name: shake;
+    animation-duration: .7s;
+    animation-iteration-count: infinite;
+}
+
+@keyframes shake {
+    0% {
+        transform: translateX(0);
+        background-color: #ffffff05;
+    }
+    20% {
+        transform: translateX(-15px);
+    }
+    40% {
+        transform: translateX(5px);
+        background-color: #ff00002c;
+    }
+    60% {
+        transform: translateX(-10px);
+        background-color: #ff00002c;
+    }
+    80% {
+        transform: translateX(5px);
+    }
+    100% {
+        transform: translateX(0);
+        background-color: #ffffff05;
+    }
 }

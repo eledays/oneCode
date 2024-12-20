@@ -63,7 +63,7 @@ def save_fingerprint():
             return jsonify({'error': str(error)}), 400
     
     elif fp_user and not id_user:
-        if datetime.now() > fp_user.created_on + timedelta(days=1):
+        if datetime.now() > fp_user.created_on + timedelta(hours=1):
             logger.log(f'FP updated for {fp_user} (no cookie, old profile)', request.remote_addr)
             fp_user.fingerprint = fingerprint
             fp_user.created_on = datetime.now()
@@ -118,10 +118,9 @@ def add_symbol():
         
         return total_changes
     
-    print(old_text, text)
     n = calculate_diff(old_text, text)
-    if n >= user.symbols:
-        return jsonify({'error': 'Not enough symbols'}), 400
+    if n > user.symbols:
+        return jsonify({'error': 'Not enough symbols', 'text': old_text}), 400
     else:
         user.symbols -= n
         db.session.commit()
@@ -132,6 +131,20 @@ def add_symbol():
     file.close()
 
     return jsonify({
+        'text': text
+    }), 200
+
+
+@app.route('/get_symbols', methods=['GET'])
+def get_symbols():
+    user_id = session.get('user_id')
+    if user_id is None:
+        return render_template('auth.html')
+    
+    user_id = int(user_id, 16).to_bytes(16, 'big') if user_id else None
+    user = User.query.filter(User.id == user_id).first()
+
+    return jsonify({
         'symbols_left': user.symbols,
-        'symbols_spent': n
+        'symbols_total': app.config.get('DEFAULT_SYMBOLS_COUNT')
     }), 200

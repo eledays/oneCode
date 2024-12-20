@@ -21,7 +21,33 @@ editor.on('inputRead', async function(cm, change) {
     }
 });
 
+var pg = document.querySelector('.progress_bar .progress_bar_inner');
+async function update_pg() {
+    fetch('/get_symbols', {
+        method: 'GET'
+    })
+    .then((r) => r.json())
+    .then((data) => {
+
+        if (data.error == 'Not enough symbols') {
+            pg.style.height = `0%`;
+            return;
+        }
+            
+        pg.style.height = `${data.symbols_left / data.symbols_total * 100}%`;
+        console.log(data);
+        
+        
+    });
+}
+update_pg();
+shakeTimeouts = [];
+
 editor.on('change', (cm, change) => {
+
+    console.log(change);
+    if (change.origin == 'setValue') return;
+
     fetch('/update_code', {
         method: 'POST',
         headers: {
@@ -30,8 +56,25 @@ editor.on('change', (cm, change) => {
         body: JSON.stringify({text: cm.getValue()})
     })
     .then((r) => r.json())
-    .then((data) => {
-        console.log(data);
+    .then(async (data) => {
+        await update_pg();
+
+        if (data.error == 'Not enough symbols') {
+            pg.parentElement.classList.add('shake');
+            shakeTimeouts.forEach(e => {
+                clearTimeout(e);
+            });
+            const timeout = setTimeout(() => {
+                pg.parentElement.classList.remove('shake');
+            }, 700);
+            shakeTimeouts.push(timeout);
+            cm.setValue(data.text);
+            return;
+        }
         
+        const cursor = editor.getCursor();
+        cm.setValue(data.text);
+        editor.setCursor(cursor);
     });
+
 });
