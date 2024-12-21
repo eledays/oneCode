@@ -25,4 +25,8 @@ if not os.path.exists(app.config.get('USER_CODE_PATH')):
 from flask_socketio import SocketIO
 socket = SocketIO(app)
 
+import uuid
+admin_id = uuid.uuid4().hex
+print('admin_id', admin_id)
+
 from app import routes, models

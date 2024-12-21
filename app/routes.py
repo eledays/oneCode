@@ -1,4 +1,4 @@
-from app import app, db, logger, socket
+from app import app, db, logger, socket, admin_id
 from app.models import User
 
 import traceback
@@ -84,7 +84,25 @@ def save_fingerprint():
 @app.route('/error/<error>')
 def error_page(error):
     return render_template('error.html', error=error)
+
+
+@app.route('/admin/<user_id>')
+def admin(user_id):
+    if user_id == admin_id:
+        session['user_id'] = admin_id
+        return redirect('/admin')
     
+    return redirect('/')
+
+
+@app.route('/admin')
+def admin_page():
+    user_id = session.get('user_id')
+    if user_id != admin_id:
+        return redirect('/')
+    
+    return render_template('admin.html')
+
 
 @socket.on('connect')
 def handle_connect():

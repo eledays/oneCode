@@ -29,4 +29,4 @@ class User(db.Model):
         user = User.query.filter(User.id == id).first()
 
         return user
-        
+    
