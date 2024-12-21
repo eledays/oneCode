@@ -27,6 +27,7 @@ body {
     border-radius: 5px;
 
     border: none;
+    background-color: #0f0f0f;
 }
 
 @media screen and (orientation: portrait) {
@@ -76,6 +77,10 @@ button#menu {
     font-size: 16px;
     cursor: pointer;
     transition: .3s;
+}
+
+button#menu span {
+    background-color: transparent;
 }
 
 .progress_bar {

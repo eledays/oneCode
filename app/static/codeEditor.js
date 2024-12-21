@@ -15,6 +15,8 @@ const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
 });
 const socket = io();
 var pg = document.querySelector('.progress_bar .progress_bar_inner');
+var nextUpdateTimeout = null;
+
 
 socket.on('connect', () => {
     console.log('Socket connected successfully');
@@ -30,7 +32,13 @@ socket.on('update_client', (data) => {
         editor.setValue(data.code);
         editor.setCursor(cursor);
     }
-    if (data.symbols) pg.style.height = `${data.symbols.left / data.symbols.total * 100}%`;
+    if (data.symbols) {
+        pg.style.height = `${data.symbols.left / data.symbols.total * 100}%`;
+        clearTimeout(nextUpdateTimeout);
+        nextUpdateTimeout = setTimeout(() => {
+            pg.style.height = '100%';
+        }, Math.max(data.symbols.update_in * 1000, 0));
+    }
 });
 
 

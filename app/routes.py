@@ -94,14 +94,14 @@ def handle_connect():
     if user is None:
         return {'error': 'No user_id'}
     
-    
     with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:
         code = file.read()
     emit('update_client', {
         'code': code,
         'symbols': {
             'left': user.symbols,
-            'total': app.config.get('DEFAULT_SYMBOLS_COUNT')
+            'total': app.config.get('DEFAULT_SYMBOLS_COUNT'),
+            'update_in': (user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')) - datetime.now()).total_seconds(),
         }
     })
 
@@ -115,12 +115,6 @@ def handle_update_server_code(text):
 
     if datetime.now() > user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')):
         user.symbols = app.config.get('DEFAULT_SYMBOLS_COUNT')
-        emit('update_client', {
-            'symbols': {
-                'left': user.symbols,
-                'total': app.config.get('DEFAULT_SYMBOLS_COUNT'),
-            }
-        })
         user.last_symbols_update = datetime.now()
         db.session.commit()
 
@@ -148,7 +142,8 @@ def handle_update_server_code(text):
         error = 'Not enough symbols'
     else:
         user.symbols -= n
-        user.last_symbols_update = datetime.now()
+        if user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')) < datetime.now():
+            user.last_symbols_update = datetime.now()
         db.session.commit()
         
         file.seek(0)
@@ -161,9 +156,11 @@ def handle_update_server_code(text):
 
     emit('update_client', {
         'code': text,
-        'symbols': {
+    }, broadcast=True)
+    emit('update_client', {'symbols': {
             'left': user.symbols,
             'total': app.config.get('DEFAULT_SYMBOLS_COUNT'),
+            'update_in': (user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')) - datetime.now()).total_seconds(),
         }
     })
 
