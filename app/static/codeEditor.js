@@ -14,6 +14,19 @@ const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
     }
 });
 
+setInterval(() => {
+    fetch('/get_code', {
+        method: 'GET'
+    })
+    .then((r) => r.json())
+    .then((data) => {
+        var cursor = editor.getCursor();
+        editor.setValue(data.code);
+        editor.setCursor(cursor);
+    });
+
+}, 100);
+
 editor.on('inputRead', async function(cm, change) {
     
     if (change.text[0].match(/[a-zA-Z0-9_]/)) {
@@ -72,7 +85,7 @@ editor.on('change', (cm, change) => {
             return;
         }
         
-        const cursor = editor.getCursor();
+        var cursor = editor.getCursor();
         cm.setValue(data.text);
         editor.setCursor(cursor);
     });

@@ -43,6 +43,7 @@ def save_fingerprint():
         try:
             for _ in range(100):
                 user = User(fingerprint=fingerprint)
+                print(user)
                 try:
                     db.session.add(user)
                     db.session.commit()
@@ -120,7 +121,7 @@ def add_symbol():
     
     n = calculate_diff(old_text, text)
     if n > user.symbols:
-        return jsonify({'error': 'Not enough symbols', 'text': old_text}), 400
+        return jsonify({'error': 'Not enough symbols', 'text': old_text}), 200
     else:
         user.symbols -= n
         db.session.commit()
@@ -148,3 +149,18 @@ def get_symbols():
         'symbols_left': user.symbols,
         'symbols_total': app.config.get('DEFAULT_SYMBOLS_COUNT')
     }), 200
+
+
+@app.route('/get_code', methods=['GET'])
+def get_code():
+    user_id = session.get('user_id')
+    if user_id is None:
+        return render_template('auth.html')
+    
+    with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:
+        code = file.read()
+    
+    return jsonify({
+        'code': code
+    }), 200
+    
