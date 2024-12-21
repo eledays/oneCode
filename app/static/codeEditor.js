@@ -73,9 +73,7 @@ editor.on('change', (cm, change) => {
             return;
         }
 
-        var cursor = editor.getCursor();
         if (data.text) cm.setValue(data.text);
-        editor.setCursor(cursor);
 
     });
 });
