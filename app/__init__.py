@@ -22,4 +22,7 @@ if not os.path.exists(app.config.get('USER_CODE_PATH')):
     with open(app.config.get('USER_CODE_PATH'), 'w') as f:
         f.write('')
 
+from flask_socketio import SocketIO
+socket = SocketIO(app)
+
 from app import routes, models

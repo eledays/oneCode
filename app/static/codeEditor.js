@@ -13,66 +13,46 @@ const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
         completeSingle: false
     }
 });
+const socket = io();
+var pg = document.querySelector('.progress_bar .progress_bar_inner');
 
-setInterval(() => {
-    fetch('/get_code', {
-        method: 'GET'
-    })
-    .then((r) => r.json())
-    .then((data) => {
+socket.on('connect', () => {
+    console.log('Socket connected successfully');
+});
+
+
+socket.on('update_client', (data) => {
+    // Обновление пользовательской страницы - код, прогресс бар
+    console.log('updated', data);
+
+    if (data.code) {
         var cursor = editor.getCursor();
         editor.setValue(data.code);
         editor.setCursor(cursor);
-    });
+    }
+    if (data.symbols) pg.style.height = `${data.symbols.left / data.symbols.total * 100}%`;
+});
 
-}, 100);
 
 editor.on('inputRead', async function(cm, change) {
-    
+    // Отображение подсказок при вводе
     if (change.text[0].match(/[a-zA-Z0-9_]/)) {
         CodeMirror.commands.autocomplete(cm);
     }
 });
 
-var pg = document.querySelector('.progress_bar .progress_bar_inner');
-async function update_pg() {
-    fetch('/get_symbols', {
-        method: 'GET'
-    })
-    .then((r) => r.json())
-    .then((data) => {
 
-        if (data.error == 'Not enough symbols') {
-            pg.style.height = `0%`;
-            return;
-        }
-            
-        pg.style.height = `${data.symbols_left / data.symbols_total * 100}%`;
-        console.log(data);
-        
-        
-    });
-}
-update_pg();
-shakeTimeouts = [];
-
+var shakeTimeouts = [];
 editor.on('change', (cm, change) => {
+    // Обработка изменения кода пользователем
 
-    console.log(change);
     if (change.origin == 'setValue') return;
-
-    fetch('/update_code', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({text: cm.getValue()})
-    })
-    .then((r) => r.json())
-    .then(async (data) => {
-        await update_pg();
+    
+    socket.emit('update_server_code', cm.getValue(), (data) => {
 
         if (data.error == 'Not enough symbols') {
+            // Недостаточно символов
+
             pg.parentElement.classList.add('shake');
             shakeTimeouts.forEach(e => {
                 clearTimeout(e);
@@ -81,13 +61,13 @@ editor.on('change', (cm, change) => {
                 pg.parentElement.classList.remove('shake');
             }, 700);
             shakeTimeouts.push(timeout);
-            cm.setValue(data.text);
+            // if (data.text) cm.setValue(data.text);
             return;
         }
-        
-        var cursor = editor.getCursor();
-        cm.setValue(data.text);
-        editor.setCursor(cursor);
-    });
 
+        var cursor = editor.getCursor();
+        if (data.text) cm.setValue(data.text);
+        editor.setCursor(cursor);
+
+    });
 });

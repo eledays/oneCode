@@ -1,4 +1,4 @@
-from app import app, db, logger
+from app import app, db, logger, socket
 from app.models import User
 
 import traceback
@@ -6,6 +6,7 @@ import sqlalchemy
 from datetime import datetime, timedelta
 
 from flask import request, render_template, make_response, session, redirect, jsonify
+from flask_socketio import emit
 
 from difflib import SequenceMatcher
 
@@ -17,8 +18,7 @@ def index():
     if user_id is None:
         return render_template('auth.html')
     else:
-        user_id = int(user_id, 16).to_bytes(16, 'big') if user_id else None
-        user = User.query.filter(User.id == user_id).first()
+        user = User.get_by_raw_id(user_id)
         if user is None:
             session.pop('user_id')
             return render_template('auth.html')
@@ -32,12 +32,9 @@ def save_fingerprint():
     fingerprint = r.get('fingerprint')
 
     user_id = session.get('user_id')
-    user_id = int(user_id, 16).to_bytes(16, 'big') if user_id else None
+    id_user = User.get_by_raw_id(user_id)
 
     fp_user = User.query.filter(User.fingerprint == fingerprint).first()
-    id_user = User.query.filter(User.id == user_id).first()
-
-    print(fp_user, id_user)
 
     if not fp_user and not id_user:
         try:
@@ -87,19 +84,45 @@ def save_fingerprint():
 @app.route('/error/<error>')
 def error_page(error):
     return render_template('error.html', error=error)
+    
 
-
-@app.route('/update_code', methods=['POST'])
-def add_symbol():
+@socket.on('connect')
+def handle_connect():
     user_id = session.get('user_id')
-    if user_id is None:
-        return render_template('auth.html')
+    user = User.get_by_raw_id(user_id)
+
+    if user is None:
+        return {'error': 'No user_id'}
     
-    user_id = int(user_id, 16).to_bytes(16, 'big') if user_id else None
-    user = User.query.filter(User.id == user_id).first()
     
-    data = request.json
-    text = data.get('text')
+    with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:
+        code = file.read()
+    emit('update_client', {
+        'code': code,
+        'symbols': {
+            'left': user.symbols,
+            'total': app.config.get('DEFAULT_SYMBOLS_COUNT')
+        }
+    })
+
+
+@socket.on('update_server_code')
+def handle_update_server_code(text):
+    user_id = session.get('user_id')
+    user = User.get_by_raw_id(user_id)
+    if user is None:
+        return {'error': 'No user_id'}
+
+    if datetime.now() > user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')):
+        user.symbols = app.config.get('DEFAULT_SYMBOLS_COUNT')
+        emit('update_client', {
+            'symbols': {
+                'left': user.symbols,
+                'total': app.config.get('DEFAULT_SYMBOLS_COUNT'),
+            }
+        })
+        user.last_symbols_update = datetime.now()
+        db.session.commit()
 
     file = open(app.config.get('USER_CODE_PATH'), 'r+', encoding='utf-8')
 
@@ -121,46 +144,39 @@ def add_symbol():
     
     n = calculate_diff(old_text, text)
     if n > user.symbols:
-        return jsonify({'error': 'Not enough symbols', 'text': old_text}), 200
+        text = old_text
+        error = 'Not enough symbols'
     else:
         user.symbols -= n
+        user.last_symbols_update = datetime.now()
         db.session.commit()
         
-    file.seek(0)
-    file.write(text)
-    file.truncate()
+        file.seek(0)
+        file.write(text)
+        file.truncate()
+
+        error = None
+        
     file.close()
 
-    return jsonify({
-        'text': text
-    }), 200
+    emit('update_client', {
+        'code': text,
+        'symbols': {
+            'left': user.symbols,
+            'total': app.config.get('DEFAULT_SYMBOLS_COUNT'),
+        }
+    })
+
+    return {'code': text, 'error': error}
 
 
-@app.route('/get_symbols', methods=['GET'])
-def get_symbols():
-    user_id = session.get('user_id')
-    if user_id is None:
-        return render_template('auth.html')
-    
-    user_id = int(user_id, 16).to_bytes(16, 'big') if user_id else None
-    user = User.query.filter(User.id == user_id).first()
-
-    return jsonify({
-        'symbols_left': user.symbols,
-        'symbols_total': app.config.get('DEFAULT_SYMBOLS_COUNT')
-    }), 200
-
-
-@app.route('/get_code', methods=['GET'])
-def get_code():
+@socket.on('update_client')
+def handle_update_client():
     user_id = session.get('user_id')
     if user_id is None:
         return render_template('auth.html')
     
     with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:
         code = file.read()
-    
-    return jsonify({
-        'code': code
-    }), 200
-    
+
+    emit('update_client', code)
