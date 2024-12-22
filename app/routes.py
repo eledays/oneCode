@@ -1,5 +1,5 @@
 from app import app, db, logger, socket, admin_id
-from app.models import User
+from app.models import User, Action
 
 import traceback
 import sqlalchemy
@@ -104,6 +104,71 @@ def admin_page():
     return render_template('admin.html')
 
 
+@app.route('/admin/full_table')
+def admin_full_table_page():
+    user_id = session.get('user_id')
+    if user_id != admin_id:
+        return redirect('/')
+    
+    rows = db.session.query(Action).all()[:]
+
+    def prettify(rows):
+        for row in rows:
+            if row.action == Action.ADD:
+                row.action = 'add'
+            elif row.action == Action.DELETE:
+                row.action = 'delete'
+            elif row.action == Action.REPLACE:
+                row.action = 'replace'
+            if row.added is None:
+                row.added = ''
+            if row.deleted is None:
+                row.deleted = ''
+            row.user_id = row.user_id.hex()
+        return rows
+    
+    rows = prettify(rows)
+    
+    return render_template('admin_table.html', rows=rows)
+
+
+@app.route('/admin/table')
+def admin_table_page():
+    user_id = session.get('user_id')
+    if user_id != admin_id:
+        return redirect('/')
+    
+    rows = db.session.query(Action).all()[:]
+
+    def prettify(rows):
+        for i, row in enumerate(rows):
+            if row.action == Action.ADD:
+                row.action = 'add'
+            elif row.action == Action.DELETE:
+                row.action = 'delete'
+            elif row.action == Action.REPLACE:
+                row.action = 'replace'
+            if row.added is None:
+                row.added = ''
+            if row.deleted is None:
+                row.deleted = ''
+            row.user_id = row.user_id.hex()
+            if i > 0 and row.user_id == rows[i - 1].user_id and row.action == rows[i - 1].action == 'add':
+                row.added = rows[i - 1].added + row.added
+                rows[i - 1] = None
+            elif i > 0 and row.user_id == rows[i - 1].user_id and row.action == rows[i - 1].action == 'delete':
+                row.deleted = rows[i - 1].deleted + row.deleted
+                rows[i - 1] = None
+
+        rows = list(filter(lambda x: x is not None, rows))
+                
+        return rows
+    
+    rows = prettify(rows)
+    
+    return render_template('admin_table.html', rows=rows)
+
+
 @socket.on('connect')
 def handle_connect():
     user_id = session.get('user_id')
@@ -142,19 +207,19 @@ def handle_update_server_code(text):
 
     def calculate_diff(text1, text2):
         matcher = SequenceMatcher(None, text1, text2)
-        total_changes = 0
-        
+        r = []
+
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
             if tag == 'insert':
-                total_changes += (j2 - j1)
-            elif tag == 'delete': 
-                total_changes += (i2 - i1)
+                r = (j2 - j1, Action.ADD, text2[j1:j2], None)
+            elif tag == 'delete':
+                r = (i2 - i1, Action.DELETE, None, text1[i1:i2])
             elif tag == 'replace':
-                total_changes += (i2 - i1) + (j2 - j1)
-        
-        return total_changes
+                r = (i2 - i1, Action.REPLACE, text2[j1:j2], text1[i1:i2])
+
+        return r
     
-    n = calculate_diff(old_text, text)
+    n, action, added, deleted = calculate_diff(old_text, text)
     if n > user.symbols:
         text = old_text
         error = 'Not enough symbols'
@@ -162,6 +227,14 @@ def handle_update_server_code(text):
         user.symbols -= n
         if user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')) < datetime.now():
             user.last_symbols_update = datetime.now()
+
+        action = Action(
+            action=action, 
+            user_id=user.id,
+            added=added,
+            deleted=deleted
+        )
+        db.session.add(action)
         db.session.commit()
         
         file.seek(0)

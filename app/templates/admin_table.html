@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Action</th>
+            <th>User ID</th>
+            <th>Added</th>
+            <th>Deleted</th>
+            <th>Datetime</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.id }}</td>
+            <td>{{ row.action }}</td>
+            <td>{{ row.user_id }}</td>
+            <td>{{ row.added }}</td>
+            <td>{{ row.deleted }}</td>
+            <td>{{ row.created_on }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
