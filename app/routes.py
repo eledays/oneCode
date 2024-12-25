@@ -5,6 +5,7 @@ import traceback
 import sqlalchemy
 from datetime import datetime, timedelta
 from hashlib import sha256
+import random
 
 from flask import request, render_template, make_response, session, redirect, jsonify, flash
 from flask_socketio import emit
@@ -23,10 +24,10 @@ def index():
     if user is None:
         session.pop('user_id')
         return render_template('auth.html')
-    elif user.banned:
+    elif user.is_banned():
         return render_template('banned.html')
     else:
-        return render_template('index.html', user_id=user.public_id)
+        return render_template('index.html', user_id=user.public_id, can_edit=user.is_editor())
         
 
 @app.route('/save-fingerprint', methods=['POST'])
@@ -39,21 +40,21 @@ def save_fingerprint():
 
     fp_user = User.query.filter(User.fingerprint == fingerprint).first()
 
-    if (id_user is not None and id_user.banned) or (fp_user is not None and fp_user.banned):
+    if (id_user is not None and id_user.is_banned()) or (fp_user is not None and fp_user.is_banned):
         logger.log(f'Banned user tried to login', request.remote_addr)
         return jsonify({'error': 'User is banned'}), 400
 
     if not fp_user and not id_user:
         try:
             for _ in range(100):
-                user = User(fingerprint=fingerprint)
+                user = User(fingerprint=fingerprint, public_id=hex(random.randint(16 ** 3, 16 ** 11)).lstrip('0x'))
                 print(user)
                 try:
                     db.session.add(user)
                     db.session.commit()
                     break
                 except sqlalchemy.exc.IntegrityError:
-                    user = User(fingerprint=fingerprint)
+                    user = User(fingerprint=fingerprint, public_id=hex(random.randint(16 ** 3, 16 ** 11)).lstrip('0x'))
                     continue
 
             logger.log(f'Created {user}', request.remote_addr)
@@ -68,7 +69,7 @@ def save_fingerprint():
             return jsonify({'error': str(error)}), 400
     
     elif fp_user and not id_user:
-        if datetime.now() > fp_user.created_on + timedelta(hours=1):
+        if datetime.now() > fp_user.created_on + app.config.get('COOKIE_UPDATE_TIMEOUT'):
             logger.log(f'FP updated for {fp_user} (no cookie, old profile)', request.remote_addr)
             fp_user.fingerprint = fingerprint
             fp_user.created_on = datetime.now()
@@ -110,7 +111,6 @@ def admin_login_page():
     
     if request.method == 'POST':
         password = request.form.get('password')
-        print(sha256(password.encode()).hexdigest(), app.config.get('ADMIN_PASSWORD_HASH'))
         if sha256(password.encode()).hexdigest() == app.config.get('ADMIN_PASSWORD_HASH'):
             session['user_id'] = admin_id
             return redirect('/admin')
@@ -150,7 +150,10 @@ def admin_user_page(user_id):
     if page_user_id != admin_id:
         return redirect('/admin_login')
     
-    user = User.get_by_raw_id(user_id)
+    if len(user_id) > 13:
+        user = User.get_by_raw_id(user_id)
+    else:
+        user = db.session.query(User).filter(User.public_id == user_id).first()
     rows = db.session.query(Action).filter(Action.user_id == user.id).all()[::-1]
     rows = Action.prettify_rows(rows, True)
 
@@ -165,7 +168,7 @@ def ban(user_id):
 
     user = User.get_by_raw_id(user_id)
     try:
-        user.banned = True
+        user.ban()
         action = Action(action=Action.BANNED, user_id=user.id)
         db.session.add(action)
         db.session.commit()
@@ -183,8 +186,44 @@ def unban(user_id):
 
     user = User.get_by_raw_id(user_id)
     try:
-        user.banned = False
+        user.unban()
         action = Action(action=Action.UNBANNED, user_id=user.id)
+        db.session.add(action)
+        db.session.commit()
+    except Exception as error:
+        print(error)
+        flash(str(error))
+    return redirect(f'/admin/user/{user_id}')
+
+
+@app.route('/make_editor/<user_id>')
+def make_editor(user_id):
+    page_user_id = session.get('user_id')
+    if page_user_id != admin_id:
+        return redirect('/admin_login')
+
+    user = User.get_by_raw_id(user_id)
+    try:
+        user.make_editor()
+        action = Action(action=Action.TO_EDITOR, user_id=user.id)
+        db.session.add(action)
+        db.session.commit()
+    except Exception as error:
+        print(error)
+        flash(str(error))
+    return redirect(f'/admin/user/{user_id}')
+
+
+@app.route('/make_spectator/<user_id>')
+def make_spectator(user_id):
+    page_user_id = session.get('user_id')
+    if page_user_id != admin_id:
+        return redirect('/admin_login')
+
+    user = User.get_by_raw_id(user_id)
+    try:
+        user.make_spectator()
+        action = Action(action=Action.TO_SPECTATOR, user_id=user.id)
         db.session.add(action)
         db.session.commit()
     except Exception as error:
@@ -201,7 +240,7 @@ def handle_connect():
     if user is None:
         return {'error': 'No user_id'}
     
-    if user.banned:
+    if user.is_banned():
         return {'error': 'User is banned'}
 
     
@@ -224,8 +263,12 @@ def handle_update_server_code(text):
     if user is None:
         return {'error': 'No user_id'}
     
-    if user.banned:
+    if user.is_banned():
         return {'error': 'User is banned'}
+    
+    if user.is_spectator():
+        with open(app.config.get('USER_CODE_PATH'), 'r+', encoding='utf-8') as file:
+            return {'error': 'User is spectator', 'text': file.read()}
 
     if datetime.now() > user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')):
         user.symbols = app.config.get('DEFAULT_SYMBOLS_COUNT')
@@ -296,7 +339,7 @@ def handle_update_client():
         return render_template('auth.html')
     
     user = User.get_by_raw_id(user_id)
-    if user.banned:
+    if user.is_banned():
         return {'error': 'User is banned'}
     
     with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:

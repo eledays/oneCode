@@ -26,9 +26,15 @@
         <p>id: {{user_id}}</p>
     </div>
 
-    <div class="progress_bar">
-        <div class="progress_bar_inner"></div>
-    </div>
+    {% if can_edit %}
+        <div class="progress_bar">
+            <div class="progress_bar_inner"></div>
+        </div>
+    {% else %}
+        <p class="spectator_info">
+            Режим наблюдателя
+        </p>
+    {% endif %}
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>

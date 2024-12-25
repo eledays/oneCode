@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>oneCode Admin - User</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
 </head>
@@ -14,7 +14,19 @@
         <p>Пользователь <span style="color: #00e1ff;">{{ user.public_id }}</span> (public_id)</p>
         <p>id: <span style="color: #00e1ff;">{{ user.id.hex() }}</span></p>
         <p>created_on: <span style="color: #00e1ff;">{{ user.created_on }}</span></p>
-        <p>banned: <span style="color: #00e1ff;">{{ user.banned }}</span> {% if user.banned %}<a href="/unban/{{ user.id.hex() }}">Разблокировать</a>{% else %}<a href="/ban/{{ user.id.hex() }}">Заблокировать</a>{% endif %}</p>
+        <p>status: 
+            {% if user.status == 0 %}
+                <span style="color: #00e1ff;">Зритель</span>
+                <a href="/ban/{{ user.id.hex() }}">Заблокировать</a>
+                <a href="/make_editor/{{ user.id.hex() }}">Разрешить редактирование</a>
+            {% elif user.status == 1 %}
+                <span style="color: #00e1ff;">Редактор</span>
+                <a href="/ban/{{ user.id.hex() }}">Заблокировать</a>
+                <a href="/make_spectator/{{ user.id.hex() }}">Запретить редактирование</a>
+            {% else %}
+                <span style="color: #00e1ff;">Заблокирован</span>
+                <a href="/unban/{{ user.id.hex() }}">Разблокировать</a>
+            {% endif %}
     </div>
 
     <table>

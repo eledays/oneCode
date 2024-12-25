@@ -1,4 +1,6 @@
 import os
+from datetime import timedelta
+import secrets
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -10,3 +12,5 @@ class Config:
     SYMBOLS_UPDATING_TIME = 5#3 * 60
     USER_CODE_PATH = os.path.join(basedir, 'user_code.txt')
     ADMIN_PASSWORD_HASH = os.environ.get('ADMIN_PASSWORD_HASH')
+    COOKIE_UPDATE_TIMEOUT = timedelta(minutes=1)
+    ADMIN_ID = '123' #secrets.token_hex(64)

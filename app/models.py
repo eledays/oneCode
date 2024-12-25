@@ -9,6 +9,10 @@ from pprint import pprint
 
 class User(db.Model):
 
+    SPECTATOR = 0
+    EDITOR = 1
+    BANNED = 2
+
     __tablename__ = 'users'
     id = db.Column(db.LargeBinary, primary_key=True, default=uuid.uuid4().bytes)
     fingerprint = db.Column(db.Text)
@@ -16,10 +20,31 @@ class User(db.Model):
     created_on = db.Column(db.DateTime, default=datetime.datetime.now())
     symbols = db.Column(db.Integer, default=app.config.get('DEFAULT_SYMBOLS_COUNT'))
     last_symbols_update = db.Column(db.DateTime, default=datetime.datetime.now())
-    banned = db.Column(db.Boolean, default=False)
+    status = db.Column(db.Integer, default=SPECTATOR)
 
     def __repr__(self):
         return f'<User:{self.public_id}>'
+    
+    def is_banned(self):
+        return self.status == User.BANNED
+    
+    def is_editor(self):
+        return self.status == User.EDITOR
+    
+    def is_spectator(self):
+        return self.status == User.SPECTATOR
+    
+    def ban(self):
+        self.status = User.BANNED
+    
+    def unban(self):
+        self.status = User.SPECTATOR
+    
+    def make_editor(self):
+        self.status = User.EDITOR
+    
+    def make_spectator(self):
+        self.status = User.SPECTATOR
     
     @staticmethod
     def get_by_raw_id(id):
@@ -41,6 +66,8 @@ class Action(db.Model):
     REPLACE = 2
     BANNED = 3
     UNBANNED = 4
+    TO_EDITOR = 5
+    TO_SPECTATOR = 6
 
     __tablename__ = 'actions'
     id = db.Column(db.Integer, primary_key=True)
@@ -65,6 +92,10 @@ class Action(db.Model):
                 row.action = 'banned'
             elif row.action == Action.UNBANNED:
                 row.action = 'unbanned'
+            elif row.action == Action.TO_EDITOR:
+                row.action = 'to_editor'
+            elif row.action == Action.TO_SPECTATOR:
+                row.action = 'to_spectator'
             if row.added is None:
                 row.added = ''
             if row.deleted is None:
@@ -100,7 +131,11 @@ class Action(db.Model):
         # pprint([[[k] + e for e in v] for k, v in d.items()][0])
 
         if small:
-            return [[[k] + e for e in v] for k, v in d.items()][0]
-        else:
-            return rows
+            rows = []
+            for k, v in d.items():
+                for e in v:
+                    rows.append([k] + e)
+            pprint(rows)
+        
+        return rows
     

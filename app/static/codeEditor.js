@@ -84,6 +84,20 @@ editor.on('change', (cm, change) => {
             window.location.href = '/';
             return;
         }
+        else if (data.error == 'User is spectator') {
+            let info = document.querySelector('p.spectator_info');
+
+            if (!info) window.location.href = '/';
+
+            info.classList.add('highlite');
+            setTimeout(() => {
+                info.classList.remove('highlite');
+            }, 1000);
+            var cursor = editor.getCursor();
+            editor.setValue(data.text);
+            editor.setCursor(cursor);
+            return;
+        }
 
         if (data.text) cm.setValue(data.text);
 

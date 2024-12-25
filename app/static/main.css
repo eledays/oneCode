@@ -137,3 +137,44 @@ button#menu span {
         background-color: #ffffff05;
     }
 }
+
+p.spectator_info {
+    position: absolute;
+    left: 50%; bottom: 50px;
+    transform: translateX(-50%);
+    font-family: 'Manrope', sans-serif;
+    color: white;
+    background-color: #ffffff13;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: default;
+    transition: .5s;
+}
+
+p.spectator_info.highlite {
+    animation-name: spectator_info_shake;
+    animation-duration: 1s;
+    font-size: 1.2em;
+    color: #ffd000;
+}
+
+@keyframes spectator_info_shake {
+    0% {
+        left: 50%;
+    }
+    20% {
+        left: calc(50% - 10px);
+    }
+    40% {
+        left: calc(50% + 10px);
+    }
+    60% {
+        left: calc(50% - 5px);
+    }
+    80% {
+        left: calc(50% + 5px);
+    }
+    100% {
+        left: 50%;
+    }
+}
