@@ -44,7 +44,12 @@
                 }
                 else {
                     body = await r.json();
-                    location.href = `/error/${body.error}`;
+                    if (body.error == 'User is banned') {
+                        location.href = '/';
+                    }
+                    else {
+                        location.href = `/error/${body.error}`;
+                    }
                 }
             });
         });

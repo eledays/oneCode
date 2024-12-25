@@ -4,21 +4,25 @@ const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
     theme: 'pycar-theme',
     lineWrapping: true, 
     tabSize: 4,
-    indentUnit: 4,
-    indentWithTabs: false,
+    // indentUnit: 4,
+    // indentWithTabs: false,
     smartIndent: true,
     extraKeys: {},
-    autoCloseBrackets: true,
-    hintOptions: {
-        completeSingle: false
-    }
+    // autoCloseBrackets: true,
+    // hintOptions: {
+    //     completeSingle: false
+    // }
 });
 const socket = io();
 var pg = document.querySelector('.progress_bar .progress_bar_inner');
 var nextUpdateTimeout = null;
 
 
-socket.on('connect', () => {
+socket.on('connect', (data) => {
+    if (data.error == 'User is banned') {
+        window.location.href = '/';
+        return;
+    }
     console.log('Socket connected successfully');
 });
 
@@ -39,15 +43,19 @@ socket.on('update_client', (data) => {
             pg.style.height = '100%';
         }, Math.max(data.symbols.update_in * 1000, 0));
     }
-});
-
-
-editor.on('inputRead', async function(cm, change) {
-    // Отображение подсказок при вводе
-    if (change.text[0].match(/[a-zA-Z0-9_]/)) {
-        CodeMirror.commands.autocomplete(cm);
+    if (data.error == 'User is banned') {
+        window.location.href = '/';
+        return;
     }
 });
+
+
+// editor.on('inputRead', async function(cm, change) {
+//     // Отображение подсказок при вводе
+//     if (change.text[0].match(/[a-zA-Z0-9_]/)) {
+//         CodeMirror.commands.autocomplete(cm);
+//     }
+// });
 
 
 var shakeTimeouts = [];
@@ -70,6 +78,10 @@ editor.on('change', (cm, change) => {
             }, 700);
             shakeTimeouts.push(timeout);
             // if (data.text) cm.setValue(data.text);
+            return;
+        }
+        else if (data.error == 'User is banned') {
+            window.location.href = '/';
             return;
         }
 

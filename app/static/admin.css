@@ -4,6 +4,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: 'Manrope', sans-serif;
 }
 
 body {
@@ -12,7 +13,6 @@ body {
 
 table {
     color: #9c9c9c;
-    font-family: 'Manrope', sans-serif;
     border-collapse: collapse;
 }
 
@@ -25,4 +25,39 @@ th {
     position: sticky;
     top: 0;
     background-color: #000;
+}
+
+p {
+    color: white;
+    margin: 3px 0;
+}
+
+a {
+    text-decoration: none;
+    color: #aee8ff;
+    display: block;
+}
+
+.controls {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    display: block;
+    text-align: center;
+}
+
+.controls a {
+    border: 1px solid #aee8ff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    margin: 5px;
+    transition: .7s;
+}
+
+.controls a:hover {
+    background-color: #004864;
+}
+
+.info {
+    margin: 20px 0;
 }

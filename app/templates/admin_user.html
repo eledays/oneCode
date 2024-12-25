@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+    <a href="/admin">Главная</a>
+
+    <div class="info">
+        <p>Пользователь <span style="color: #00e1ff;">{{ user.public_id }}</span> (public_id)</p>
+        <p>id: <span style="color: #00e1ff;">{{ user.id.hex() }}</span></p>
+        <p>created_on: <span style="color: #00e1ff;">{{ user.created_on }}</span></p>
+        <p>banned: <span style="color: #00e1ff;">{{ user.banned }}</span> {% if user.banned %}<a href="/unban/{{ user.id.hex() }}">Разблокировать</a>{% else %}<a href="/ban/{{ user.id.hex() }}">Заблокировать</a>{% endif %}</p>
+    </div>
+
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Action</th>
+            <th>Added</th>
+            <th>Deleted</th>
+            <th>Datetime</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            {% for e in row %}
+                <td>{{ e }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

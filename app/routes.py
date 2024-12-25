@@ -5,7 +5,7 @@ import traceback
 import sqlalchemy
 from datetime import datetime, timedelta
 
-from flask import request, render_template, make_response, session, redirect, jsonify
+from flask import request, render_template, make_response, session, redirect, jsonify, flash
 from flask_socketio import emit
 
 from difflib import SequenceMatcher
@@ -17,13 +17,15 @@ def index():
     
     if user_id is None:
         return render_template('auth.html')
+    
+    user = User.get_by_raw_id(user_id)
+    if user is None:
+        session.pop('user_id')
+        return render_template('auth.html')
+    elif user.banned:
+        return render_template('banned.html')
     else:
-        user = User.get_by_raw_id(user_id)
-        if user is None:
-            session.pop('user_id')
-            return render_template('auth.html')
-        else:
-            return render_template('index.html', user_id=user.public_id)
+        return render_template('index.html', user_id=user.public_id)
         
 
 @app.route('/save-fingerprint', methods=['POST'])
@@ -35,6 +37,10 @@ def save_fingerprint():
     id_user = User.get_by_raw_id(user_id)
 
     fp_user = User.query.filter(User.fingerprint == fingerprint).first()
+
+    if (id_user is not None and id_user.banned) or (fp_user is not None and fp_user.banned):
+        logger.log(f'Banned user tried to login', request.remote_addr)
+        return jsonify({'error': 'User is banned'}), 400
 
     if not fp_user and not id_user:
         try:
@@ -110,24 +116,8 @@ def admin_full_table_page():
     if user_id != admin_id:
         return redirect('/')
     
-    rows = db.session.query(Action).all()[:]
-
-    def prettify(rows):
-        for row in rows:
-            if row.action == Action.ADD:
-                row.action = 'add'
-            elif row.action == Action.DELETE:
-                row.action = 'delete'
-            elif row.action == Action.REPLACE:
-                row.action = 'replace'
-            if row.added is None:
-                row.added = ''
-            if row.deleted is None:
-                row.deleted = ''
-            row.user_id = row.user_id.hex()
-        return rows
-    
-    rows = prettify(rows)
+    rows = db.session.query(Action).all()[::-1]
+    rows = Action.prettify_rows(rows, False)
     
     return render_template('admin_table.html', rows=rows)
 
@@ -138,35 +128,59 @@ def admin_table_page():
     if user_id != admin_id:
         return redirect('/')
     
-    rows = db.session.query(Action).all()[:]
-
-    def prettify(rows):
-        for i, row in enumerate(rows):
-            if row.action == Action.ADD:
-                row.action = 'add'
-            elif row.action == Action.DELETE:
-                row.action = 'delete'
-            elif row.action == Action.REPLACE:
-                row.action = 'replace'
-            if row.added is None:
-                row.added = ''
-            if row.deleted is None:
-                row.deleted = ''
-            row.user_id = row.user_id.hex()
-            if i > 0 and row.user_id == rows[i - 1].user_id and row.action == rows[i - 1].action == 'add':
-                row.added = rows[i - 1].added + row.added
-                rows[i - 1] = None
-            elif i > 0 and row.user_id == rows[i - 1].user_id and row.action == rows[i - 1].action == 'delete':
-                row.deleted = rows[i - 1].deleted + row.deleted
-                rows[i - 1] = None
-
-        rows = list(filter(lambda x: x is not None, rows))
-                
-        return rows
-    
-    rows = prettify(rows)
+    rows = db.session.query(Action).all()[::-1]
+    rows = Action.prettify_rows(rows, True)
     
     return render_template('admin_table.html', rows=rows)
+
+
+@app.route('/admin/user/<user_id>')
+def admin_user_page(user_id):
+    page_user_id = session.get('user_id')
+    if page_user_id != admin_id:
+        return redirect('/')
+    
+    user = User.get_by_raw_id(user_id)
+    rows = db.session.query(Action).filter(Action.user_id == user.id).all()[::-1]
+    rows = Action.prettify_rows(rows, True)
+
+    return render_template('admin_user.html', user=user, rows=rows)
+
+
+@app.route('/ban/<user_id>')
+def ban(user_id):
+    page_user_id = session.get('user_id')
+    if page_user_id != admin_id:
+        return redirect('/')
+
+    user = User.get_by_raw_id(user_id)
+    try:
+        user.banned = True
+        action = Action(action=Action.BANNED, user_id=user.id)
+        db.session.add(action)
+        db.session.commit()
+    except Exception as error:
+        print(error)
+        flash(str(error))
+    return redirect(f'/admin/user/{user_id}')
+
+
+@app.route('/unban/<user_id>')
+def unban(user_id):
+    page_user_id = session.get('user_id')
+    if page_user_id != admin_id:
+        return redirect('/')
+
+    user = User.get_by_raw_id(user_id)
+    try:
+        user.banned = False
+        action = Action(action=Action.UNBANNED, user_id=user.id)
+        db.session.add(action)
+        db.session.commit()
+    except Exception as error:
+        print(error)
+        flash(str(error))
+    return redirect(f'/admin/user/{user_id}')
 
 
 @socket.on('connect')
@@ -176,6 +190,10 @@ def handle_connect():
 
     if user is None:
         return {'error': 'No user_id'}
+    
+    if user.banned:
+        return {'error': 'User is banned'}
+
     
     with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:
         code = file.read()
@@ -195,6 +213,9 @@ def handle_update_server_code(text):
     user = User.get_by_raw_id(user_id)
     if user is None:
         return {'error': 'No user_id'}
+    
+    if user.banned:
+        return {'error': 'User is banned'}
 
     if datetime.now() > user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')):
         user.symbols = app.config.get('DEFAULT_SYMBOLS_COUNT')
@@ -263,6 +284,10 @@ def handle_update_client():
     user_id = session.get('user_id')
     if user_id is None:
         return render_template('auth.html')
+    
+    user = User.get_by_raw_id(user_id)
+    if user.banned:
+        return {'error': 'User is banned'}
     
     with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:
         code = file.read()
