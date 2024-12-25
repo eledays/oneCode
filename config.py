@@ -9,3 +9,4 @@ class Config:
     DEFAULT_SYMBOLS_COUNT = 20
     SYMBOLS_UPDATING_TIME = 5#3 * 60
     USER_CODE_PATH = os.path.join(basedir, 'user_code.txt')
+    ADMIN_PASSWORD_HASH = os.environ.get('ADMIN_PASSWORD_HASH')

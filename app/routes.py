@@ -4,6 +4,7 @@ from app.models import User, Action
 import traceback
 import sqlalchemy
 from datetime import datetime, timedelta
+from hashlib import sha256
 
 from flask import request, render_template, make_response, session, redirect, jsonify, flash
 from flask_socketio import emit
@@ -92,29 +93,38 @@ def error_page(error):
     return render_template('error.html', error=error)
 
 
-@app.route('/admin/<user_id>')
-def admin(user_id):
-    if user_id == admin_id:
-        session['user_id'] = admin_id
-        return redirect('/admin')
-    
-    return redirect('/')
-
-
 @app.route('/admin')
 def admin_page():
     user_id = session.get('user_id')
     if user_id != admin_id:
-        return redirect('/')
+        return redirect('/admin_login')
     
     return render_template('admin.html')
+
+
+@app.route('/admin_login', methods=['POST', 'GET'])
+def admin_login_page():
+    user_id = session.get('user_id')
+    if user_id == admin_id:
+        return redirect('/admin')
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        print(sha256(password.encode()).hexdigest(), app.config.get('ADMIN_PASSWORD_HASH'))
+        if sha256(password.encode()).hexdigest() == app.config.get('ADMIN_PASSWORD_HASH'):
+            session['user_id'] = admin_id
+            return redirect('/admin')
+        else:
+            return redirect('/')
+
+    return render_template('admin_login.html')
 
 
 @app.route('/admin/full_table')
 def admin_full_table_page():
     user_id = session.get('user_id')
     if user_id != admin_id:
-        return redirect('/')
+        return redirect('/admin_login')
     
     rows = db.session.query(Action).all()[::-1]
     rows = Action.prettify_rows(rows, False)
@@ -126,7 +136,7 @@ def admin_full_table_page():
 def admin_table_page():
     user_id = session.get('user_id')
     if user_id != admin_id:
-        return redirect('/')
+        return redirect('/admin_login')
     
     rows = db.session.query(Action).all()[::-1]
     rows = Action.prettify_rows(rows, True)
@@ -138,7 +148,7 @@ def admin_table_page():
 def admin_user_page(user_id):
     page_user_id = session.get('user_id')
     if page_user_id != admin_id:
-        return redirect('/')
+        return redirect('/admin_login')
     
     user = User.get_by_raw_id(user_id)
     rows = db.session.query(Action).filter(Action.user_id == user.id).all()[::-1]
@@ -151,7 +161,7 @@ def admin_user_page(user_id):
 def ban(user_id):
     page_user_id = session.get('user_id')
     if page_user_id != admin_id:
-        return redirect('/')
+        return redirect('/admin_login')
 
     user = User.get_by_raw_id(user_id)
     try:
@@ -169,7 +179,7 @@ def ban(user_id):
 def unban(user_id):
     page_user_id = session.get('user_id')
     if page_user_id != admin_id:
-        return redirect('/')
+        return redirect('/admin_login')
 
     user = User.get_by_raw_id(user_id)
     try:
