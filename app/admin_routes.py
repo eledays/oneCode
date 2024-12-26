@@ -65,7 +65,7 @@ def admin_users_table_page():
     
     rows = db.session.query(User).all()
     
-    return render_template('admin_users_table.html', rows=[e.public_id for e in rows])
+    return render_template('admin_users_table.html', rows=[[e.public_id, e.status] for e in rows])
 
 
 @app.route('/admin/user/<user_id>')
@@ -136,6 +136,25 @@ def make_editor(user_id):
         print(error)
         flash(str(error))
     return redirect(f'/admin/user/{user_id}')
+
+
+@app.route('/make_all_spectator')
+def make_all_spectator():
+    page_user_id = session.get('user_id')
+    if page_user_id != admin_id:
+        return redirect('/admin_login')
+    
+    users = db.session.query(User).all()
+    for user in users:
+        try:
+            user.make_spectator()
+            action = Action(action=Action.TO_SPECTATOR, user_id=user.id)
+            db.session.add(action)
+            db.session.commit()
+        except Exception as error:
+            print(error)
+            flash(str(error))
+    return redirect('/admin/users_table')
 
 
 @app.route('/make_spectator/<user_id>')

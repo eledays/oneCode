@@ -18,13 +18,22 @@
 </head>
 <body>
     <a href="/admin">Главная</a>
+    <a href="/make_all_spectator">Перевести всех в наблюдателя</a>
     <table>
         <tr>
             <th>User ID</th>
+            <th>Status</th>
         </tr>
         {% for row in rows %}
         <tr>
-            <td><a href="/admin/user/{{ row }}">{{ row }}</a></td>
+            <td><a href="/admin/user/{{ row[0] }}">{{ row[0] }}</a></td>
+            {% if row[1] == 0 %}
+                <td><span style="padding: 2px 7px; border-radius: 10px; background-color: #ffbb002d; color: #ffbb00;">spectator</span></td>
+            {% elif row[1] == 1 %}
+                <td><span style="padding: 2px 7px; border-radius: 10px; background-color: #00ff002d; color: #00ff00;">editor</span></td>
+            {% elif row[1] == 2 %}
+                <td><span style="padding: 2px 7px; border-radius: 10px; background-color: #ff00002d; color: #ff0000;">banned</span></td>
+            {% endif %}
         </tr>
         {% endfor %}
     </table>
