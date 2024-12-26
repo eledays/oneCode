@@ -4,7 +4,6 @@ from app.models import User, Action
 import traceback
 import sqlalchemy
 from datetime import datetime, timedelta
-from hashlib import sha256
 import random
 
 from flask import request, render_template, make_response, session, redirect, jsonify, flash
@@ -19,15 +18,20 @@ def index():
     
     if user_id is None:
         return render_template('auth.html')
+    elif user_id == admin_id:
+        return render_template('index.html', can_edit=False)
     
     user = User.get_by_raw_id(user_id)
+    print(user)
+    if 'authed' in request.args and user is None:
+        return redirect('/error/auth_error')
     if user is None:
         session.pop('user_id')
         return render_template('auth.html')
     elif user.is_banned():
         return render_template('banned.html')
     else:
-        return render_template('index.html', user_id=user.public_id, can_edit=user.is_editor())
+        return render_template('index.html', user_id=user.public_id, can_edit=user.is_editor(), first='first' in request.args)
         
 
 @app.route('/save-fingerprint', methods=['POST'])
@@ -41,7 +45,12 @@ def save_fingerprint():
     fp_user = User.query.filter(User.fingerprint == fingerprint).first()
 
     if (id_user is not None and id_user.is_banned()) or (fp_user is not None and fp_user.is_banned):
-        logger.log(f'Banned user tried to login', request.remote_addr)
+        logger.log(f'Banned user {id_user or fp_user} tried to login', request.remote_addr)
+        if fp_user is not None:
+            fp_user.created_on = datetime.now()
+            db.session.commit()
+            id_user = fp_user
+        session['user_id'] = id_user.id.hex()
         return jsonify({'error': 'User is banned'}), 400
 
     if not fp_user and not id_user:
@@ -60,7 +69,7 @@ def save_fingerprint():
             logger.log(f'Created {user}', request.remote_addr)
 
             session['user_id'] = user.id.hex()
-            return jsonify({}), 200
+            return jsonify({'new_user': True}), 200
         
         except Exception as error:
             exc = traceback.format_exc()
@@ -94,144 +103,6 @@ def error_page(error):
     return render_template('error.html', error=error)
 
 
-@app.route('/admin')
-def admin_page():
-    user_id = session.get('user_id')
-    if user_id != admin_id:
-        return redirect('/admin_login')
-    
-    return render_template('admin.html')
-
-
-@app.route('/admin_login', methods=['POST', 'GET'])
-def admin_login_page():
-    user_id = session.get('user_id')
-    if user_id == admin_id:
-        return redirect('/admin')
-    
-    if request.method == 'POST':
-        password = request.form.get('password')
-        if sha256(password.encode()).hexdigest() == app.config.get('ADMIN_PASSWORD_HASH'):
-            session['user_id'] = admin_id
-            return redirect('/admin')
-        else:
-            return redirect('/')
-
-    return render_template('admin_login.html')
-
-
-@app.route('/admin/full_table')
-def admin_full_table_page():
-    user_id = session.get('user_id')
-    if user_id != admin_id:
-        return redirect('/admin_login')
-    
-    rows = db.session.query(Action).all()[::-1]
-    rows = Action.prettify_rows(rows, False)
-    
-    return render_template('admin_table.html', rows=rows)
-
-
-@app.route('/admin/table')
-def admin_table_page():
-    user_id = session.get('user_id')
-    if user_id != admin_id:
-        return redirect('/admin_login')
-    
-    rows = db.session.query(Action).all()[::-1]
-    rows = Action.prettify_rows(rows, True)
-    
-    return render_template('admin_table.html', rows=rows)
-
-
-@app.route('/admin/user/<user_id>')
-def admin_user_page(user_id):
-    page_user_id = session.get('user_id')
-    if page_user_id != admin_id:
-        return redirect('/admin_login')
-    
-    if len(user_id) > 13:
-        user = User.get_by_raw_id(user_id)
-    else:
-        user = db.session.query(User).filter(User.public_id == user_id).first()
-    rows = db.session.query(Action).filter(Action.user_id == user.id).all()[::-1]
-    rows = Action.prettify_rows(rows, True)
-
-    return render_template('admin_user.html', user=user, rows=rows)
-
-
-@app.route('/ban/<user_id>')
-def ban(user_id):
-    page_user_id = session.get('user_id')
-    if page_user_id != admin_id:
-        return redirect('/admin_login')
-
-    user = User.get_by_raw_id(user_id)
-    try:
-        user.ban()
-        action = Action(action=Action.BANNED, user_id=user.id)
-        db.session.add(action)
-        db.session.commit()
-    except Exception as error:
-        print(error)
-        flash(str(error))
-    return redirect(f'/admin/user/{user_id}')
-
-
-@app.route('/unban/<user_id>')
-def unban(user_id):
-    page_user_id = session.get('user_id')
-    if page_user_id != admin_id:
-        return redirect('/admin_login')
-
-    user = User.get_by_raw_id(user_id)
-    try:
-        user.unban()
-        action = Action(action=Action.UNBANNED, user_id=user.id)
-        db.session.add(action)
-        db.session.commit()
-    except Exception as error:
-        print(error)
-        flash(str(error))
-    return redirect(f'/admin/user/{user_id}')
-
-
-@app.route('/make_editor/<user_id>')
-def make_editor(user_id):
-    page_user_id = session.get('user_id')
-    if page_user_id != admin_id:
-        return redirect('/admin_login')
-
-    user = User.get_by_raw_id(user_id)
-    try:
-        user.make_editor()
-        action = Action(action=Action.TO_EDITOR, user_id=user.id)
-        db.session.add(action)
-        db.session.commit()
-    except Exception as error:
-        print(error)
-        flash(str(error))
-    return redirect(f'/admin/user/{user_id}')
-
-
-@app.route('/make_spectator/<user_id>')
-def make_spectator(user_id):
-    page_user_id = session.get('user_id')
-    if page_user_id != admin_id:
-        return redirect('/admin_login')
-
-    user = User.get_by_raw_id(user_id)
-    try:
-        user.make_spectator()
-        action = Action(action=Action.TO_SPECTATOR, user_id=user.id)
-        db.session.add(action)
-        db.session.commit()
-    except Exception as error:
-        print(error)
-        flash(str(error))
-    return redirect(f'/admin/user/{user_id}')
-
-
 @socket.on('connect')
 def handle_connect():
     user_id = session.get('user_id')
@@ -259,7 +130,13 @@ def handle_connect():
 @socket.on('update_server_code')
 def handle_update_server_code(text):
     user_id = session.get('user_id')
-    user = User.get_by_raw_id(user_id)
+
+    if user_id != admin_id:
+        user = User.get_by_raw_id(user_id)
+    else:
+        with open(app.config.get('USER_CODE_PATH'), 'r+', encoding='utf-8') as file:
+            return {'error': 'User is spectator', 'text': file.read()}
+
     if user is None:
         return {'error': 'No user_id'}
     

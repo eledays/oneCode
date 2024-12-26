@@ -38,12 +38,17 @@
                 body: JSON.stringify({ fingerprint: visitorId })
             })
             .then(async (r) => {
+                body = await r.json();
                 
-                if (r.ok) {
+                if (r.ok && body.new_user) {
+                    location.href = '/?first';
+                }
+                else if (r.ok) {
                     location.href = '/';
                 }
                 else {
-                    body = await r.json();
+                    console.log(body);
+                    
                     if (body.error == 'User is banned') {
                         location.href = '/';
                     }

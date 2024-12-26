@@ -17,23 +17,36 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=menu" />
 </head>
 <body>
-    <div class="content">
-        <textarea name="codeEditor" id="codeEditor"></textarea>
-    </div>
-
-    <button id="menu"><span class="material-symbols-rounded">menu</span></button>
-    <div class="menu_block" hidden>
-        <p>id: {{user_id}}</p>
-    </div>
-
-    {% if can_edit %}
-        <div class="progress_bar">
-            <div class="progress_bar_inner"></div>
+    <div class="main" {% if first %}hidden{% endif %}>
+        <div class="content">
+            <textarea name="codeEditor" id="codeEditor"></textarea>
         </div>
-    {% else %}
-        <p class="spectator_info">
-            Режим наблюдателя
-        </p>
+
+        <button id="menu"><span class="material-symbols-rounded">menu</span></button>
+        <div class="menu_block" hidden>
+            <p>id: {{user_id}}</p>
+        </div>
+
+        {% if can_edit %}
+            <div class="progress_bar">
+                <div class="progress_bar_inner"></div>
+            </div>
+        {% else %}
+            <p class="spectator_info">
+                Режим наблюдателя
+            </p>
+        {% endif %}
+    </div>
+
+    {% if first %}
+    <div class="guide">
+        <div class="block">
+            <div class="">
+                <p></p>
+                <a href="https://t.me/+YgxQ40roNvtjMWQ6"></a>
+            </div>
+        </div>
+    </div>
     {% endif %}
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>

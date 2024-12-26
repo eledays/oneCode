@@ -178,3 +178,45 @@ p.spectator_info.highlite {
         left: 50%;
     }
 }
+
+.guide {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+}
+
+.guide .block {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 60px;
+    background-color: #1d1d1d;
+    font-family: monospace;
+    font-size: 18px;
+    text-align: center;
+    opacity: 0;
+    transition: 1s;
+    border-radius: 20px;
+}
+
+.guide .block div {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    left: 30px;
+    text-align: left;
+    width: 340px;
+}
+
+.guide .block div p {
+    color: white;
+    text-align: left;
+    width: 340px;
+    transition: 1s;
+}
+
+.guide .block div a {
+    color: #aee8ff;
+    text-decoration: none;
+    transition: 1s;
+}

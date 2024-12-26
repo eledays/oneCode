@@ -28,4 +28,4 @@ socket = SocketIO(app)
 import secrets
 admin_id = app.config.get('ADMIN_ID')
 
-from app import routes, models
+from app import routes, models, admin_routes
