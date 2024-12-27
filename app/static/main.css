@@ -8,6 +8,7 @@
 
 body {
     background-color: #0f0f0f;
+    overflow: hidden;
 }
 
 .content {
@@ -219,4 +220,29 @@ p.spectator_info.highlite {
     color: #aee8ff;
     text-decoration: none;
     transition: 1s;
+}
+
+.snowflake {
+    position: absolute;
+    top: 0;
+    background-color: rgba(255, 255, 255, 0.747);
+    font-size: 10px;
+    user-select: none;
+    pointer-events: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation-name: snoflake-fall;
+    animation-fill-mode: forwards;
+    animation-timing-function: linear;
+    z-index: -10000;
+}
+
+@keyframes snoflake-fall {
+    0% {
+        top: 0;
+    }
+    100% {
+        top: 100%;
+    }
 }

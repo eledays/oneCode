@@ -117,6 +117,7 @@ def handle_connect():
     
     with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:
         code = file.read()
+
     emit('update_client', {
         'code': code,
         'symbols': {

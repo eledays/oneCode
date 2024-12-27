@@ -122,7 +122,6 @@ class Action(db.Model):
             for k, v in d.items():
                 for e in v:
                     rows.append([k] + e)
-            pprint(rows)
         
         return rows
     

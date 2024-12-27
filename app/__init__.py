@@ -3,6 +3,9 @@ load_dotenv()
 
 import os
 
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask
 from config import Config
 
@@ -23,9 +26,8 @@ if not os.path.exists(app.config.get('USER_CODE_PATH')):
         f.write('')
 
 from flask_socketio import SocketIO
-socket = SocketIO(app)
+socket = SocketIO(app, async_mode='eventlet', ping_timeout=240, ping_interval=25, cors_allowed_origins='*')
 
-import secrets
 admin_id = app.config.get('ADMIN_ID')
 
 from app import routes, models, admin_routes
