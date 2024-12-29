@@ -101,3 +101,34 @@ if (main.hasAttribute('hidden')) {
     }, totalTime);
 
 }
+
+(function createSnow() {
+    const snowflakeCount = 100; // Количество снежинок
+
+    function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.classList.add('snowflake');
+
+        // Устанавливаем начальное положение
+        if (Math.round(Math.random())) snowflake.style.left = Math.random() * 20 + 'vw';
+        else snowflake.style.right = Math.random() * 20 + 'vw';
+        snowflake.style.animationDuration = (Math.random() * 10 + 5) + 's';
+        let d =  Math.random() * 5 + 5 + 'px';
+        snowflake.style.width = d;
+        snowflake.style.height = d;
+        document.body.appendChild(snowflake);
+
+        // Удаляем снежинку после окончания анимации
+        setTimeout(() => {
+            snowflake.remove();
+        }, 15000);
+    }
+
+    function startSnowfall() {
+        setInterval(() => {
+            createSnowflake();
+        }, 1000); // Интервал появления новых снежинок
+    }
+
+    startSnowfall();
+})();

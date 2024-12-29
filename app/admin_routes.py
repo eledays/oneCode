@@ -53,6 +53,8 @@ def admin_table_page():
     
     rows = db.session.query(Action).all()[::-1]
     rows = Action.prettify_rows(rows, True)
+
+    rows = sorted(rows, key=lambda x: x[4], reverse=True)
     
     return render_template('admin_table.html', rows=rows)
 
@@ -63,7 +65,7 @@ def admin_users_table_page():
     if user_id != admin_id:
         return redirect('/admin_login')
     
-    rows = db.session.query(User).all()
+    rows = db.session.query(User).all()[::-1]
     
     return render_template('admin_users_table.html', rows=[[e.public_id, e.status] for e in rows])
 
@@ -84,6 +86,30 @@ def admin_user_page(user_id):
     return render_template('admin_user.html', user=user, rows=rows)
 
 
+@app.route('/admin/change_update_time/<seconds>')
+def change_update_time(seconds):
+    page_user_id = session.get('user_id')
+    if page_user_id != admin_id:
+        return redirect('/admin_login')
+    
+    if seconds.isdigit():
+        app.config['SYMBOLS_UPDATING_TIME'] = int(seconds)
+
+    return 'ok', 200
+
+
+@app.route('/admin/change_symbols_count/<n>')
+def change_symbols_count(n):
+    page_user_id = session.get('user_id')
+    if page_user_id != admin_id:
+        return redirect('/admin_login')
+    
+    if n.isdigit():
+        app.config['DEFAULT_SYMBOLS_COUNT'] = int(n)
+
+    return 'ok', 200
+
+
 @app.route('/ban/<user_id>')
 def ban(user_id):
     page_user_id = session.get('user_id')
@@ -99,7 +125,8 @@ def ban(user_id):
     except Exception as error:
         print(error)
         flash(str(error))
-    return redirect(f'/admin/user/{user_id}')
+
+    return redirect(request.args.get('fr') or f'/admin/user/{user_id}')
 
 
 @app.route('/unban/<user_id>')
@@ -117,7 +144,8 @@ def unban(user_id):
     except Exception as error:
         print(error)
         flash(str(error))
-    return redirect(f'/admin/user/{user_id}')
+
+    return redirect(request.args.get('fr') or f'/admin/user/{user_id}')
 
 
 @app.route('/make_editor/<user_id>')
@@ -135,7 +163,8 @@ def make_editor(user_id):
     except Exception as error:
         print(error)
         flash(str(error))
-    return redirect(f'/admin/user/{user_id}')
+
+    return redirect(request.args.get('fr') or f'/admin/user/{user_id}')
 
 
 @app.route('/make_all_spectator')
@@ -172,4 +201,5 @@ def make_spectator(user_id):
     except Exception as error:
         print(error)
         flash(str(error))
-    return redirect(f'/admin/user/{user_id}')
+
+    return redirect(request.args.get('fr') or f'/admin/user/{user_id}')

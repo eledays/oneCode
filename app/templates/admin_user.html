@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>oneCode Admin - User</title>
 
+    <link rel="shortcut icon" href="{{ url_for('static', filename='imgs/favicon_admin.ico') }}" type="image/x-icon" />
+
     <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
 </head>
 <body>
     <a href="/admin">Главная</a>
+    <a href="/admin/users_table">Таблица пользователей</a>
 
     <div class="info">
         <p>Пользователь <span style="color: #00e1ff;">{{ user.public_id }}</span> (public_id)</p>

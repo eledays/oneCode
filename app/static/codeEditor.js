@@ -13,17 +13,37 @@ const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
     //     completeSingle: false
     // }
 });
-const socket = io();
+console.log(`${window.location.protocol}//${window.location.host}`);
+
+// const socket = io(`wss://127.0.0.1:5000`, {
+//     reconnection: true,
+//     reconnectionAttempts: 3,
+//     timeout: 20000,
+//     transports: ['websocket'], //, 'polling',
+//     secure: true
+// });
+const socket = io({
+    reconnection: true,
+    reconnectionAttempts: 3,
+    timeout: 20000,
+    transports: ['websocket'], //, 'polling',
+    secure: true
+});
 var pg = document.querySelector('.progress_bar .progress_bar_inner');
 var nextUpdateTimeout = null;
 
 
 socket.on('connect', (data) => {
-    if (data.error == 'User is banned') {
+    if (data && data.error == 'User is banned') {
         window.location.href = '/';
         return;
     }
     console.log('Socket connected successfully');
+});
+
+
+socket.on('connect_error', (err) => {
+    console.error(err);
 });
 
 
@@ -36,7 +56,7 @@ socket.on('update_client', (data) => {
         editor.setValue(data.code);
         editor.setCursor(cursor);
     }
-    if (data.symbols) {
+    if (data.symbols && pg) {
         pg.style.height = `${data.symbols.left / data.symbols.total * 100}%`;
         clearTimeout(nextUpdateTimeout);
         nextUpdateTimeout = setTimeout(() => {
