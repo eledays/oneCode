@@ -53,7 +53,10 @@ class User(db.Model):
         if id is None:
             return None
         
-        id = int(id, 16).to_bytes(16, 'big')
+        try:
+            id = int(id, 16).to_bytes(16, 'big')
+        except OverflowError:
+            return None
         user = User.query.filter(User.id == id).first()
 
         return user
@@ -109,11 +112,14 @@ class Action(db.Model):
                 elif d[user_id][-1][0] == action and d[user_id][-1][3] + datetime.timedelta(minutes=5) > row.created_on:
                     if action == 'add':
                         d[user_id][-1][1] = added + d[user_id][-1][1]
+                        d[user_id][-1][3] = row.created_on
                     elif action == 'delete':
                         d[user_id][-1][2] = d[user_id][-1][2] + deleted
+                        d[user_id][-1][3] = row.created_on
                     elif action == 'replace':
                         d[user_id][-1][1] += added
                         d[user_id][-1][2] = deleted + d[user_id][-1][2]
+                        d[user_id][-1][3] = row.created_on
                 else:
                     d[user_id].append([action, added, deleted, row.created_on])
 

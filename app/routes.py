@@ -5,6 +5,7 @@ import traceback
 import sqlalchemy
 from datetime import datetime, timedelta
 import random
+import uuid
 
 from flask import request, render_template, make_response, session, redirect, jsonify, flash
 from flask_socketio import emit
@@ -22,7 +23,6 @@ def index():
         return render_template('index.html', can_edit=False)
     
     user = User.get_by_raw_id(user_id)
-    print(user)
     if 'authed' in request.args and user is None:
         return redirect('/error/auth_error')
     if user is None:
@@ -56,14 +56,14 @@ def save_fingerprint():
     if not fp_user and not id_user:
         try:
             for _ in range(100):
-                user = User(fingerprint=fingerprint, public_id=hex(random.randint(16 ** 3, 16 ** 11)).lstrip('0x'))
-                print(user)
+                user = User(id=uuid.uuid4().bytes, fingerprint=fingerprint, public_id=hex(random.randint(16 ** 3, 16 ** 11)).lstrip('0x'))
                 try:
                     db.session.add(user)
                     db.session.commit()
                     break
                 except sqlalchemy.exc.IntegrityError:
-                    user = User(fingerprint=fingerprint, public_id=hex(random.randint(16 ** 3, 16 ** 11)).lstrip('0x'))
+                    db.session.rollback()
+                    user = User(id=uuid.uuid4().bytes, fingerprint=fingerprint, public_id=hex(random.randint(16 ** 3, 16 ** 11)).lstrip('0x'))
                     continue
 
             logger.log(f'Created {user}', request.remote_addr)
@@ -108,35 +108,44 @@ def handle_connect():
     user_id = session.get('user_id')
     user = User.get_by_raw_id(user_id)
 
-    if user is None:
+    if user is None and user_id != admin_id:
         return {'error': 'No user_id'}
     
-    if user.is_banned():
+    if user and user.is_banned():
         return {'error': 'User is banned'}
 
     
     with open(app.config.get('USER_CODE_PATH'), 'r', encoding='utf-8') as file:
         code = file.read()
 
-    emit('update_client', {
-        'code': code,
-        'symbols': {
-            'left': user.symbols,
-            'total': app.config.get('DEFAULT_SYMBOLS_COUNT'),
-            'update_in': (user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')) - datetime.now()).total_seconds(),
+    if user:
+        data = {
+            'code': code,
+            'symbols': {
+                'left': user.symbols,
+                'total': app.config.get('DEFAULT_SYMBOLS_COUNT'),
+                'update_in': (user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')) - datetime.now()).total_seconds(),
+            }
         }
-    })
+    else:
+        data = {'code': code}
+
+    emit('update_client', data)
 
 
 @socket.on('update_server_code')
 def handle_update_server_code(text):
     user_id = session.get('user_id')
 
-    if user_id != admin_id:
-        user = User.get_by_raw_id(user_id)
+    if user_id == admin_id:
+        with open(app.config.get('USER_CODE_PATH'), 'w', encoding='utf-8') as file:
+            file.write(text)
+            emit('update_client', {
+                'code': text,
+            }, broadcast=True)
+        return {'test': text}
     else:
-        with open(app.config.get('USER_CODE_PATH'), 'r+', encoding='utf-8') as file:
-            return {'error': 'User is spectator', 'text': file.read()}
+        user = User.get_by_raw_id(user_id)
 
     if user is None:
         return {'error': 'No user_id'}
@@ -171,11 +180,15 @@ def handle_update_server_code(text):
 
         return r
     
+    diff = calculate_diff(old_text, text)
+    if diff is None:
+        return
     n, action, added, deleted = calculate_diff(old_text, text)
     if n > user.symbols:
         text = old_text
         error = 'Not enough symbols'
     else:
+        n -= (added.count(' ') if added else 0 + deleted.count(' ') if deleted else 0)
         user.symbols -= n
         if user.last_symbols_update + timedelta(seconds=app.config.get('SYMBOLS_UPDATING_TIME')) < datetime.now():
             user.last_symbols_update = datetime.now()
